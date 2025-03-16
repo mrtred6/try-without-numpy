@@ -90,6 +90,7 @@ def process_sounds(output_folder):
                 output_path = os.path.join(output_folder, output_name)
                 sf.write(output_path, mix_sig, fs_s, format='WAV', subtype='PCM_16')
 
+
 fol ="sounds"
 path = os.path.join("assets",fol)
 os.makedirs(path,exist_ok=True)
