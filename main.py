@@ -11,77 +11,14 @@ from kivy.uix.popup import Popup
 from kivy.uix.label import Label
 from kivy.core.audio import SoundLoader
 from pandas import DataFrame
-import os,random
+import os,random, json
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
 from datetime import datetime
-import requests
-from PIL import Image
-from io import BytesIO
-import sys
 from android.storage import primary_external_storage_path
 
-sys.stdout.reconfigure(encoding='utf-8')
-url_base = "https://ylgjx3-8000.csb.app"
-
-data_out = {"شماره_آزمون":[],
-            "منبع_صدا":[],
-            "کاراکتر":[],
-            "جهت_پخش_صدا":[],
-            "سرعت_پخش":[],
-            "مدت_زمان_ثانیه":[],
-            'فاصله':[]}
-
-def output_csv(name):  
-    df = DataFrame(data_out) 
-    dir_file = os.path.join(os.path.dirname(__file__),name,'data file.csv')   
-
-    # ذخیره‌سازی در فایل CSV  
-    df.to_csv(dir_file, index=False, encoding='utf-8-sig')   
-
-def plot_sound_path_polar(stop_time, direction, speed, path , num):
-    total_time = 10/speed
-    stop_distance = 10 * (1 - stop_time / total_time)
-    data_out["فاصله"].append(stop_distance)
-
-def plot_grouped_density(data, path , group_col):
-    url = f"{url_base}/plot_grouped_density/?group_col={group_col}"
-
-    image_path_task = os.path.join(path, "plot_grouped_density _ "+ group_col+".png")
-    response = requests.post(url, json=data)
-
-    if response.status_code == 200:
-        try:
-            # تبدیل تصویر به بایت
-            image = Image.open(BytesIO(response.content))
-            image.save(image_path_task)
-        except Exception as e:
-            print(f"خطا در ذخیره تصویر: {e}")
-    else:
-        print(f"خطا در دریافت تصویر: {response.status_code}")
-        print(response.text)
-
-
-def plot_polar_sound_sources(data,path, group_col="منبع صدا"):
-    url = f"{url_base}/plot_polar_sound_sources/?group_col={group_col}"
-
-    image_path_task = os.path.join(path, "plot_polar_sound_sources _"+ group_col +".png")
-    response = requests.post(url, json=data)
-
-    if response.status_code == 200:
-        try:
-            # تبدیل تصویر به بایت
-            image = Image.open(BytesIO(response.content))
-            image.save(image_path_task)
-        except Exception as e:
-            print(f"خطا در ذخیره تصویر: {e}")
-    else:
-        print(f"خطا در دریافت تصویر: {response.status_code}")
-        print(response.text)
-
-
-path_font = os.path.join(os.path.dirname(__file__),"asset","font","STITRBD.ttf")
+path_font = os.path.join(os.path.dirname(__file__),"asset","STITRBD.ttf")
 LabelBase.register(name='font', fn_regular = path_font)
 
 class BaseScreen(Screen):
@@ -108,12 +45,8 @@ class MainPage(BaseScreen):
             Patient_name = self.ids.name.text
             now = datetime.now()
             formatted_time = now.strftime("%Y-%m-%d %H-%M")
-            Patient_name_date = Patient_name + " "+ formatted_time
-
-            folder_patirnt=os.path.join(primary_external_storage_path(),"Downloads","Auditory Trust Test","Patient Output")
-            os.makedirs(folder_patirnt,exist_ok=True)
-            self.manager.patient_name_path = os.path.join(folder_patirnt, Patient_name_date)
-            os.makedirs(self.manager.patient_name_path)
+            path_Patient = Patient_name + "_"+ formatted_time
+            self.manager.patient_name_path = path_Patient
             self.manager.transition.direction = "left"  # تعیین جهت انیمیشن
             self.manager.current = "settings"  # تغییر صفحه
 
@@ -308,7 +241,7 @@ class FirstPage(BaseScreen):
     def btn(self):
         self.manager.current = "contorl"
         self.manager.transition.direction = "left"
-        data_out["کاراکتر"].append(self.manager.caracter )
+        self.manager.data_out["کاراکتر"].append(self.manager.caracter )
 
 class ContorolPage(BaseScreen): 
     elapsed_time = 0.0  # مقدار ثانیه‌شمار
@@ -318,6 +251,10 @@ class ContorolPage(BaseScreen):
         loc_list = self.manager.list_sound
         direct = os.path.join(os.path.dirname(__file__),"sounds", loc_list[0] )  
         self.sound = SoundLoader.load(direct)
+    def dis_save(self,stop_time, speed):
+        total_time = 10/speed
+        stop_distance = 10 * (1 - stop_time / total_time)
+        self.manager.data_out["فاصله"].append(stop_distance)
 
     def start_timer(self):
         if not self.running:
@@ -350,15 +287,13 @@ class ContorolPage(BaseScreen):
             loc_list =self.manager.list_sound[0].split("_")
             direction = loc_list[1].split(" ")[0]
             speed = float(loc_list[2][:-5])
-            data_out["مدت_زمان_ثانیه"].append(stop_time)
-            data_out["سرعت_پخش"].append(speed)
-            data_out["جهت_پخش_صدا"].append(direction)
-            data_out["منبع_صدا"].append(loc_list[0])
-            data_out["شماره_آزمون"].append(self.manager.number_task)
+            self.manager.data_out["مدت_زمان_ثانیه"].append(stop_time)
+            self.manager.data_out["سرعت_پخش"].append(speed)
+            self.manager.data_out["جهت_پخش_صدا"].append(direction)
+            self.manager.data_out["منبع_صدا"].append(loc_list[0])
+            self.manager.data_out["شماره_آزمون"].append(self.manager.number_task)
             self.Initial_state()
-            number = str(self.manager.number_task)
-            plot_sound_path_polar(stop_time, direction, speed,
-                                   self.manager.patient_name_path,number)
+            self.dis_save(stop_time, speed)
             if len(self.manager.list_sound)==0:
                 self.manager.current = "end"
             else:
@@ -423,13 +358,19 @@ class EndPage(BaseScreen):
 
 class LastPage(BaseScreen):
     def save_file(self):
-        output_csv(self.manager.patient_name_path)
-        plot_grouped_density(data_out, self.manager.patient_name_path,group_col="منبع_صدا")
-        plot_grouped_density(data_out, self.manager.patient_name_path,group_col='کاراکتر')
-        plot_grouped_density(data_out, self.manager.patient_name_path,group_col="شماره_آزمون")
-        plot_polar_sound_sources(data_out, self.manager.patient_name_path, group_col="منبع_صدا")
-        plot_polar_sound_sources(data_out, self.manager.patient_name_path, group_col='کاراکتر')
-        plot_polar_sound_sources(data_out, self.manager.patient_name_path, group_col="شماره_آزمون")
+        name = self.manager.patient_name_path
+        folder = os.path.join(primary_external_storage_path(),"Download","Auditory Trust Test",name)
+        os.makedirs(folder,exist_ok=True)
+        namspl = name.split("_")
+        user_info = {"نام": namspl[0],
+            "تاریخ": namspl[1] ,  # فرمت استاندارد تاریخ
+            "داده‌ها": self.manager.data_out}
+        dir_file_csv = os.path.join(folder,name+".csv")
+        df = DataFrame(self.manager.data_out)
+        df.to_csv(dir_file_csv, index=False, encoding='utf-8-sig') 
+        dir_file_jason = os.path.join(folder,name+".json") 
+        with open(dir_file_jason, "w", encoding="utf-8") as f:
+            json.dump(user_info, f, indent=4, ensure_ascii=False)
 
     def save_exit(self):
         self.save_file()
@@ -438,12 +379,8 @@ class LastPage(BaseScreen):
     def save_continue(self):
         self.save_file()
         self.manager.number_task = 0
-        data_out["شماره_آزمون"]= []
-        data_out["جهت_پخش_صدا"] = []
-        data_out["سرعت_پخش"] = []
-        data_out["فاصله"] = []
-        data_out["مدت_زمان_ثانیه"] = []
-        data_out["منبع_صدا"]= [] 
+        self.manager.data_out = {key: [] for key in ["شماره_آزمون", "جهت_پخش_صدا", "سرعت_پخش", "فاصله", "مدت_زمان_ثانیه", "منبع_صدا"]}
+
         self.manager.transition.direction = "right"
         self.manager.current = "main"
 
