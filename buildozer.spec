@@ -13,7 +13,7 @@ package.domain = org.AuditoryTrustTest
 source.dir = .
 
 # (list) Source files to include (let empty to include all the files)
-source.include_exts = py,kv,atlas,png,jpg,ttf,wav,csv 
+source.include_exts = py,kv,atlas,png,jpg,ttf,wav,csv,jsoan
 
 # (list) List of inclusions using pattern matching
 source.include_patterns = assets/*,images/*,sounds/*.wav
@@ -38,7 +38,7 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements =python3,kivy,arabic-reshaper,python-bidi,pandas,requests,pillow
+requirements =python3,kivy,arabic-reshaper,python-bidi,pandas
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
